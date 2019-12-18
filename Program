@@ -1,0 +1,106 @@
+#define CAYENNE_PRINT Serial
+#include<CayenneMQTTESP8266.h>  // library for the cayenne server
+char ssid[] = "ICT_Innovation_Lab"; 
+char wifiPassword[] = "beinnovative#";
+char username[] = "313ebe30-f86d-11e9-84bb-8f71124cfdfb";
+char password[] = "4530fd265bddbb0c9c69aff0da1857fa70156b2e";
+char clientID[] = "89df0850-f878-11e9-a38a-d57172a4b4d4";
+
+#define trigPin D0
+#define echoPin D1
+int duration;
+int distance;
+int waterlevel;
+#define redLed D2
+#define greenLed D4
+
+
+#define DHTPIN D3
+#include<DHT.h>
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+int localTemp = 0;
+int localHum = 0;
+
+void setup() {
+
+  Cayenne.begin(username, password,clientID, ssid, wifiPassword);
+  
+  pinMode(trigPin, OUTPUT); 
+  pinMode(echoPin, INPUT);
+  pinMode(redLed, OUTPUT);
+  pinMode(greenLed, OUTPUT); 
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  Cayenne.loop();
+  getDistance();
+  getDHT();
+  ledControle();
+  serialPrint();
+ 
+  delay(500);
+}
+
+void getDistance(void){
+  digitalWrite(trigPin,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin,LOW);
+  duration = pulseIn(echoPin,HIGH);
+  
+  distance= (duration*0.034) / 2; // calculation distance. 
+  waterlevel = 18 - distance;
+  
+ 
+
+}
+
+void getDHT(void)
+{
+  //float tempIni = localTemp;
+  //float humIni = localHum;
+
+  localTemp = dht.readTemperature();
+  localHum = dht.readHumidity();
+ 
+}
+
+void ledControle(void)
+{
+  digitalWrite(redLed,LOW);
+  digitalWrite(greenLed,LOW);
+
+  if(waterlevel > 8)
+  {
+    digitalWrite(redLed,HIGH);
+  }
+
+  else if( waterlevel <= 8)
+  {
+    digitalWrite(greenLed,HIGH);
+  }
+}
+void serialPrint(void)
+{
+  Serial.print("Distance: ");
+  Serial.print(waterlevel);
+  Serial.println(" cm");
+  Serial.print("Temperature ");
+  Serial.print(localTemp);
+  Serial.print(" c ");
+  Serial.print("Humidity ");
+  Serial.print(localHum);
+  Serial.println(" %");
+  
+}
+CAYENNE_OUT_DEFAULT()
+{
+  Cayenne.virtualWrite(1,waterlevel);
+  Cayenne.virtualWrite(2,localTemp);
+  Cayenne.virtualWrite(3,localHum);
+}
